@@ -37,6 +37,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>	// requires C99 and is considered the "standard way" to do booleans
+#include <getopt.h>		// convenient argument parsing. Works on Linux and Mac OSX
+//#include <unistd.h>	// can either use unistd.h or getopt.h for handling args.
+
 
 typedef uint8_t BYTE;
 
@@ -120,24 +124,89 @@ typedef uint32_t REGISTER;
 #define STATUS_S0	(1<<0) // processor mode
 
 
+/*
+ * Global Variables:
+ */
+char USAGE[] = "\nARMpit - ARM processor imitation technology (2013 - Samael Bate)\n\nUsage: armpit [arguments] [file ..]\n\nArguments:\n -f <filename>\tspecify a file of ARM assembly to be processed.\n -v\t\tverbose output\n -h\t\thelp";
+
+static bool VERBOSE = false;	// -v option
+const char *fileName;			// -f option
+FILE *file;
+static const char *optString = "f:vh"; // requires <getopt.h> or <unistd.h>
+
+
 /*	------------------------------------------------------------------------
-			Function Prototypes
+		Function Prototypes
 	----------------------------------------------------------------------*/
 
 void init();
+void displayUsage();
 
 void loadInstruction(INSTRUCTION);
 
 INSTRUCTION fetchInstruction();
 
+void doDataProcessing();
+void doBranch();
+void doDataTransfer();
+void doInterupt();
 
 
+/*
+ * should potentially take some arguments. I want to use '-f' to point to a text file of 
+ * ARM assembly which can the be parsed into binary and loaded onto my virtual stack.
+ * -v should activate verbose logging output and -h should show the usage.
+ */
 int main(int argc, char *argv[]) {
+    int opt = getopt( argc, argv, optString );
+    while( opt != -1 ) {
+        switch( opt ) {                
+            case 'f':
+                fileName = optarg;
+                printf("\nAT THIS TIME INPUT FILES ARE UNSUPPORTED\n");
+                exit(EXIT_FAILURE);
+                break;
+            case 'v':
+                VERBOSE = true;
+                break;
+            case 'h':
+                displayUsage();
+                exit(EXIT_SUCCESS);
+                break;
+            case '?':
+                displayUsage();
+                exit(EXIT_FAILURE);
+                break;
+            default:
+                /* You won't actually get here. */
+                break;
+        }
+        opt = getopt( argc, argv, optString );
+    }
+    
+    printf("Verbose Logging: %s\n", VERBOSE? "true" : "false");
+    printf("Input File: %s\n", fileName? fileName : "");
+
     init();
 
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 void init() {
-    printf("starting ARMpit");
+    printf("\nStarting ARMpit...\n\n");
+
+    INSTRUCTION instruction;
+    instruction.data32 = 0xE3A00001;	// MOV R0, #1 	; 1110 0011 1010 0000 0000 0000 0000 0001
+    loadInstruction(instruction);
+}
+
+void displayUsage() {
+	puts(USAGE);
+}
+
+void loadInstruction(INSTRUCTION i) {
+	if(VERBOSE)
+		printf("\tLoading Instruction:\t%02X %02X %02X %02X\n", i.byte[0], i.byte[1], i.byte[2], i.byte[3]);
+
+	// now to place it onto my virtual stack
 }
