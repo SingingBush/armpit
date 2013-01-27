@@ -163,7 +163,12 @@ int main(int argc, char *argv[]) {
         switch( opt ) {                
             case 'f':
                 fileName = optarg;
-                printf("\nAT THIS TIME INPUT FILES ARE UNSUPPORTED\n");
+                file = fopen(fileName, "r"); // r indicates opening for Read Only
+                if(file == NULL) {
+                    printf("Error opening %s\n", fileName);
+                    exit(EXIT_FAILURE);
+                }
+                printf("\n\tAT THIS TIME INPUT FILES ARE UNSUPPORTED\n\n");
                 exit(EXIT_FAILURE);
                 break;
             case 'v':
