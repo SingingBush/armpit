@@ -16,6 +16,8 @@
 	GT – Greater than		LE – Less or Equal
  *
  */
+#define COND_CODE_POS (28)
+
 #define CONDITION_EQUAL	(0x0) // 0000
 #define CONDITION_NOT_EQUAL	(0x1) // 0001
 #define CONDITION_CARRY_SET	(0x2) // 0010
@@ -46,10 +48,31 @@ typedef uint8_t BYTE;
 
 typedef union myInstructionType {
     uint32_t data32;
-    BYTE byte[4];
+    BYTE byte[4]; // endian issue - when getting an individual byte you need to reverse the order
 } INSTRUCTION;
 
 typedef uint32_t REGISTER;
+
+// registers:
+REGISTER registers[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//int& REGISTER_0 = registers[0];
+// int &REGISTER_1 = *registers[1];
+// int &REGISTER_2 = *registers[2];
+// int &REGISTER_3 = *registers[3];
+// int &REGISTER_4 = *registers[4];
+// int &REGISTER_5 = *registers[5];
+// int &REGISTER_6 = *registers[6];
+// int &REGISTER_7 = *registers[7];
+// int &REGISTER_8 = *registers[8];
+// int &REGISTER_9 = *registers[9];
+// int &REGISTER_10 = *registers[10];
+// int &REGISTER_11 = *registers[11];
+// int &REGISTER_12 = *registers[12];       // General Purpose (but often used as the stack pointer).
+// int &STACK_POINTER = *registers[13];     // R13 is the SP (stack pointer)
+// int &LINK_REGISTER = *registers[14];     // R14 is general purpose or the LR (link register)
+// int &PROGRAM_COUNTER = *registers[15];   // R15 is used as program counter
+// (note: the bottom 2 bits of the PC are always 0 0 when memory is accessed.
+//                  i.e. memory is implicitly accessed on a word aligned boundary.)
 
 
 // now define some bitmasks:
@@ -113,6 +136,8 @@ typedef uint32_t REGISTER;
  * bit 1   Processor mode bit
  * bit 0   Processor mode bit
 */
+BYTE STATUS_REGISTER;
+
 #define STATUS_N	(1<<7) // negative
 #define STATUS_Z	(1<<6) // zero flag
 #define STATUS_C	(1<<5) // carry flag
@@ -134,6 +159,9 @@ const char *fileName;			// -f option
 FILE *file;
 static const char *optString = "f:vh"; // requires <getopt.h> or <unistd.h>
 
+INSTRUCTION memory[1024]; // 4 kilobytes of RAM in this example (since 1 instruction = 4 bytes)
+
+
 
 /*	------------------------------------------------------------------------
 		Function Prototypes
@@ -151,6 +179,11 @@ void doDataProcessing();
 void doBranch();
 void doDataTransfer();
 void doInterupt();
+
+int isSet(int);
+int isClear(int);
+void setFlag(int);
+void clearFlag(int);
 
 
 /*
@@ -196,8 +229,19 @@ int main(int argc, char *argv[]) {
     init(); // load instructions onto stack
 
     // fetch
+    INSTRUCTION instruction = fetchInstruction();
 
     // check 1st 4 bits (if 1110 execute)
+    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction.data32);
+
+    instruction = fetchInstruction();
+    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction);  
+
+    instruction = fetchInstruction();
+    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction); 
+
+    instruction = fetchInstruction();
+    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction);   
 
     exit(EXIT_SUCCESS);
 }
@@ -206,7 +250,19 @@ void init() {
     printf("\nStarting ARMpit...\n\n");
 
     INSTRUCTION instruction;
-    instruction.data32 = 0xE3A00001;	// MOV R0, #1 	; 1110 0011 1010 0000 0000 0000 0000 0001
+    instruction.data32 = 0xE3A00001;	// MOV R0, #1 	; 11100011 10100000 00000000 00000001
+    loadInstruction(instruction);
+
+    instruction.data32 = 0xFFFFFFFF; // never execute;
+    loadInstruction(instruction);
+
+    instruction.data32 = 0xE3f3fa02;    // MOV R1, #2       ; 1110 0011 1010 0000 0001 0000 0000 0010
+    loadInstruction(instruction);
+
+    instruction.data32 = 0xE0802001;    // ADD R2, R0, R1   ; 1110 0000 1000 0000 0010 0000 0000 0001
+    loadInstruction(instruction);
+
+    instruction.data32 = 0xE2822001;    // ADD R2, R2, #5   ; 1110 0010 1000 0010 0010 0000 0000 0101
     loadInstruction(instruction);
 }
 
@@ -216,9 +272,19 @@ void displayUsage() {
 
 void loadInstruction(INSTRUCTION i) {
 	if(VERBOSE)
-		printf("\tLoading Instruction:\t%02X %02X %02X %02X\n", i.byte[0], i.byte[1], i.byte[2], i.byte[3]);
+		printf("\tLoading Instruction: %04X onto stack at position %i\n", i, registers[13]);
 
 	// now to place it onto my virtual stack
+    memory[registers[13]] = i;
+    registers[13]++; //STACK_POINTER++;
+}
+
+INSTRUCTION fetchInstruction() {
+    if(registers[13] > 0)
+        registers[13]--; // as the position is incremented after loading each instruction, it needs to be decreased 
+    INSTRUCTION instruction = memory[registers[13]];
+    printf("Fetching instruction: %04X from position %i\n", instruction.data32, registers[13]);
+    return instruction;
 }
 
 
@@ -261,13 +327,44 @@ void loadInstruction(INSTRUCTION i) {
  *
  */ 
 bool shouldExecute(INSTRUCTION i) {
-    // check the 1st 4 bits of instrucion
+    bool execute = false;
+    int conditionCode = i.data32 >> COND_CODE_POS;
 
-    // if 1111 return false
+    switch (conditionCode) {
+        case CONDITION_EQUAL: // 0000
+            execute = isSet( STATUS_Z ); // check if zero flag is set
+            break;
+        case CONDITION_NOT_EQUAL:
+            execute = isClear( STATUS_Z ); // check if zero flag is clear
+            break;
 
-    // if 1110 return true
+        // // other conditions ....
+        // // some are a bit more complex, e.g.
+        // case CONDITION_LESS_THAN  : execute = ( isSet( STAT_N ) && isClear( STAT_V ) ) || ( isClear(STAT_N) && isSet(STAT_V) ) ; break;
+        // // other conditions ....
 
-    // else
-    
-    // go through all various combinations checking the corresponding status register flag
+        case CONDITION_ALWAYS: // 1110
+            execute = true;
+            break;
+        case CONDITION_NEVER: // 1111
+            execute = false;
+            break;
+    }
+    return execute; 
+}
+
+int isSet(int flag) {
+    return (STATUS_REGISTER & flag);
+}
+
+int isClear(int flag) {
+    return ((~STATUS_REGISTER) & flag);
+}
+
+void setFlag(int flag) {
+    STATUS_REGISTER = STATUS_REGISTER | flag;
+}
+
+void clearFlag(int flag) {
+    STATUS_REGISTER = STATUS_REGISTER & (~flag);
 }
