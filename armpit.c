@@ -146,6 +146,7 @@ void loadInstruction(INSTRUCTION);
 
 INSTRUCTION fetchInstruction();
 
+bool shouldExecute();
 void doDataProcessing();
 void doBranch();
 void doDataTransfer();
@@ -192,7 +193,11 @@ int main(int argc, char *argv[]) {
     printf("Verbose Logging: %s\n", VERBOSE? "true" : "false");
     printf("Input File: %s\n", fileName? fileName : "");
 
-    init();
+    init(); // load instructions onto stack
+
+    // fetch
+
+    // check 1st 4 bits (if 1110 execute)
 
     exit(EXIT_SUCCESS);
 }
@@ -214,4 +219,55 @@ void loadInstruction(INSTRUCTION i) {
 		printf("\tLoading Instruction:\t%02X %02X %02X %02X\n", i.byte[0], i.byte[1], i.byte[2], i.byte[3]);
 
 	// now to place it onto my virtual stack
+}
+
+
+/*
+ * All instructions are 32 bits in length.  Bit 31-28 of all instructions contain a condition code which is used to decide 
+ * whether the instruction will execute.
+ * This condition code identifies the required state of the status register (SR) in order for execution to take place.
+ *
+ * The table below shows each condition code value (stored in top 4 bits of the instruction) and the status flags which are
+ * tested to see whether the condition is true.  If a status flag is blank then that means its value doesn't matter for that
+ * condition to be true.
+ *
+ * -------------------------------------------------------------------------------
+ *               Condition   Status Reg Flags
+ *                  Code    | N | Z | C | V |
+ * -------------------------------------------------------------------------------
+ * Equal            0000    |   | 1 |   |   | Execute the instruction if the Z flag is set.
+ * Not Equal        0001    |   | 0 |   |   | Execute the instruction is the Z flag is clear.
+ * Carry Set        0010    |   |   | 1 |   | Execute the instruction if the C flag is set. Provides >= test (unsigned).
+ * Carry Clear      0011    |   |   | 0 |   | Execute if the C flag is clear. Provides < test for unsigned comparison.
+ * Minus            0100    | 1 |   |   |   | Execute if the N flag is set.
+ * Plus             0101    | 0 |   |   |   | Execute if the N flag is clear.
+ * Overflow Set     0110    |   |   |   | 1 | Execute if the V flag is set.
+ * Overflow Clear   0111    |   |   |   | 0 | Execute if the V flag is clear.
+ * Higher           1000    |   | 0 | 1 |   | Execute if the C flag is set and Z flag is clear. Provides > test (unsigned).
+ * Lower or Same    1001    |   | 1 | 0 |   | Execute if the C flag is clear and Z flag is set. Provides <= test (unsigned).
+ * Greater or Equal 1010    | 0 |   |   | 0 | Execute if the N flag is clear and V flag is clear, 
+ *                          | 1 |   |   | 1 |  or N flag is set and V flag is set. Provides >= test for signed comparison.
+ *              
+ * Less Than        1011    | 0 |   |   | 1 | Execute if the N flag is clear and V flag is set, 
+ *                          | 1 |   |   | 0 |  or N flag is set and V flag is clear. Provides a < test for signed comparison.
+ *                          
+ * Greater Than     1100    | 0 | 0 |   | 0 | Same as GE but Z flag must be clear. Provides > test for signed comparison.
+ *                          | 1 | 0 |   | 1 |
+ * Less or Equal    1101    | 0 |   |   | 1 | Same as LT but also true if Z flag is set.
+ *                          | 1 |   |   | 0 |
+ *                          |   | 1 |   |   |
+ * Always           1110    |   |   |   |   | Instruction always executes. Flags irrelevant.
+ * Never            1111    |   |   |   |   | Instruction never executes. Flags irrelevant.
+ *
+ */ 
+bool shouldExecute(INSTRUCTION i) {
+    // check the 1st 4 bits of instrucion
+
+    // if 1111 return false
+
+    // if 1110 return true
+
+    // else
+    
+    // go through all various combinations checking the corresponding status register flag
 }
