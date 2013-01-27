@@ -235,13 +235,13 @@ int main(int argc, char *argv[]) {
     if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction.data32);
 
     instruction = fetchInstruction();
-    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction);  
+    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction.data32);  
 
     instruction = fetchInstruction();
-    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction); 
+    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction.data32); 
 
     instruction = fetchInstruction();
-    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction);   
+    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction.data32);   
 
     exit(EXIT_SUCCESS);
 }
@@ -272,7 +272,7 @@ void displayUsage() {
 
 void loadInstruction(INSTRUCTION i) {
 	if(VERBOSE)
-		printf("\tLoading Instruction: %04X onto stack at position %i\n", i, registers[13]);
+		printf("\tLoading Instruction: %04X onto stack at position %i\n", i.data32, registers[13]);
 
 	// now to place it onto my virtual stack
     memory[registers[13]] = i;
@@ -332,17 +332,63 @@ bool shouldExecute(INSTRUCTION i) {
 
     switch (conditionCode) {
         case CONDITION_EQUAL: // 0000
-            execute = isSet( STATUS_Z ); // check if zero flag is set
+            // Execute the instruction is the Z flag is set.
+            execute = isSet(STATUS_Z);
             break;
-        case CONDITION_NOT_EQUAL:
-            execute = isClear( STATUS_Z ); // check if zero flag is clear
+        case CONDITION_NOT_EQUAL: // 0001
+            // Execute the instruction is the Z flag is clear.
+            execute = isClear(STATUS_Z);
             break;
-
-        // // other conditions ....
-        // // some are a bit more complex, e.g.
-        // case CONDITION_LESS_THAN  : execute = ( isSet( STAT_N ) && isClear( STAT_V ) ) || ( isClear(STAT_N) && isSet(STAT_V) ) ; break;
-        // // other conditions ....
-
+        case CONDITION_CARRY_SET: // 0010
+            // Execute the instruction if the C flag is set. Provides >= test (unsigned).
+            execute = isSet(STATUS_C);
+            break;
+        case CONDITION_CARRY_CLEAR: // 0011
+            // Execute if the C flag is clear. Provides < test for unsigned comparison.
+            execute = isClear(STATUS_C);
+            break;
+        case CONDITION_MINUS: // 0100
+            // Execute if the N flag is set.
+            execute = isSet(STATUS_N);
+            break;
+        case CONDITION_PLUS: // 0101
+            // Execute if the N flag is clear.
+            execute = isClear(STATUS_N);
+            break;
+        case CONDITION_OVERFLOW_SET: // 0110
+            // Execute if the V flag is set.
+            execute = isSet(STATUS_V);
+            break;
+        case CONDITION_OVERFLOW_CLEAR: // 0111
+            // Execute if the V flag is clear.
+            execute = isClear(STATUS_V);
+            break;
+        case CONDITION_HIGHER: // 1000
+            // Execute if the C flag is set and Z flag is clear. Provides > test (unsigned).
+            execute = ( isSet(STATUS_C) && isClear(STATUS_Z) );
+            break;
+        case CONDITION_LOWER_OR_SAME: // 1001
+            // Execute if the C flag is clear and Z flag is set. Provides <= test (unsigned).
+            execute = ( isClear(STATUS_C) && isSet(STATUS_Z) );
+            break;
+        case CONDITION_GREATER_OR_EQUAL: // 1010
+            // Execute if the N flag is clear and V flag is clear, or N flag is set and V flag is set. 
+            // Provides >= test for signed comparison.
+            execute = ( isClear(STATUS_N) && isClear(STATUS_V) ) || ( isSet(STATUS_N) && isSet(STATUS_V) );
+            break;
+        case CONDITION_LESS_THAN: // 1011
+            // Execute if the N flag is clear and V flag is set, or N flag is set and V flag is clear. 
+            // Provides a < test for signed comparison.
+            execute = ( isSet(STATUS_N) && isClear(STATUS_V) ) || ( isClear(STATUS_N) && isSet(STATUS_V) );
+            break;
+        case CONDITION_GREATER_THAN: // 1100
+            // Same as GE but Z flag must be clear. Provides > test for signed comparison.
+            execute = ( isClear(STATUS_N) && isClear(STATUS_V) && isClear(STATUS_Z) ) || ( isSet(STATUS_N) && isSet(STATUS_V) && isClear(STATUS_Z));
+            break;
+        case CONDITION_LESS_OR_EQUAL: // 1101
+            // Same as LT but also true if Z flag is set.
+            execute = ( isSet(STATUS_N) && isClear(STATUS_V) ) || ( isClear(STATUS_N) && isSet(STATUS_V) ) || isSet(STATUS_Z);
+            break;
         case CONDITION_ALWAYS: // 1110
             execute = true;
             break;
