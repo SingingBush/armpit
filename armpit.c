@@ -39,38 +39,51 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>     // for strcat
 #include <stdbool.h>	// requires C99 and is considered the "standard way" to do booleans
 #include <getopt.h>		// convenient argument parsing. Works on Linux and Mac OSX
 //#include <unistd.h>	// can either use unistd.h or getopt.h for handling args.
 
+#include "armpit.h"     // contains some defines and my function prototypes.
 
-typedef uint8_t BYTE;
 
-typedef union myInstructionType {
-    uint32_t data32;
-    BYTE byte[4]; // endian issue - when getting an individual byte you need to reverse the order
-} INSTRUCTION;
-
-typedef uint32_t REGISTER;
 
 // registers:
-REGISTER registers[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-//int& REGISTER_0 = registers[0];
-// int &REGISTER_1 = *registers[1];
-// int &REGISTER_2 = *registers[2];
-// int &REGISTER_3 = *registers[3];
-// int &REGISTER_4 = *registers[4];
-// int &REGISTER_5 = *registers[5];
-// int &REGISTER_6 = *registers[6];
-// int &REGISTER_7 = *registers[7];
-// int &REGISTER_8 = *registers[8];
-// int &REGISTER_9 = *registers[9];
-// int &REGISTER_10 = *registers[10];
-// int &REGISTER_11 = *registers[11];
+// REGISTER registers[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+// // uint32_t *R0 = &registers[0];
+// // int R1 = *registers[1];
+// // int &REGISTER_2 = *registers[2];
+// // int &REGISTER_3 = *registers[3];
+// // int &REGISTER_4 = *registers[4];
+// // int &REGISTER_5 = *registers[5];
+// // int &REGISTER_6 = *registers[6];
+// // int &REGISTER_7 = *registers[7];
+// // int &REGISTER_8 = *registers[8];
+// // int &REGISTER_9 = *registers[9];
+// // int &REGISTER_10 = *registers[10];
+// // int &REGISTER_11 = *registers[11];
+// // int &REGISTER_12 = *registers[12];       // General Purpose (but often used as the stack pointer).
+// REGISTER *STACK_POINTER = &registers[13];     // R13 is the SP (stack pointer)
+// REGISTER *LINK_REGISTER = &registers[14];     // R14 is general purpose or the LR (link register)
+// REGISTER *PROGRAM_COUNTER = &registers[15];   // R15 is used as program counter
+
+REGISTER R1 = 0;
+REGISTER R2 = 0;
+REGISTER R3 = 0;
+REGISTER R4 = 0;
+REGISTER R5 = 0;
+REGISTER R6 = 0;
+REGISTER R7 = 0;
+REGISTER R8 = 0;
+REGISTER R9 = 0;
+REGISTER R10 = 0;
+REGISTER R11 = 0;
+REGISTER R12 = 0;
 // int &REGISTER_12 = *registers[12];       // General Purpose (but often used as the stack pointer).
-// int &STACK_POINTER = *registers[13];     // R13 is the SP (stack pointer)
-// int &LINK_REGISTER = *registers[14];     // R14 is general purpose or the LR (link register)
-// int &PROGRAM_COUNTER = *registers[15];   // R15 is used as program counter
+REGISTER STACK_POINTER;     // R13 is the SP (stack pointer)
+REGISTER LINK_REGISTER;     // R14 is general purpose or the LR (link register)
+REGISTER PROGRAM_COUNTER;   // R15 is used as program counter
+
 // (note: the bottom 2 bits of the PC are always 0 0 when memory is accessed.
 //                  i.e. memory is implicitly accessed on a word aligned boundary.)
 
@@ -164,27 +177,24 @@ INSTRUCTION memory[1024]; // 4 kilobytes of RAM in this example (since 1 instruc
 
 
 /*	------------------------------------------------------------------------
-		Function Prototypes
+		Function Prototypes now in armpit.h
 	----------------------------------------------------------------------*/
 
-void init();
-void displayUsage();
 
-void loadInstruction(INSTRUCTION);
 
-INSTRUCTION fetchInstruction();
+// function from: stackoverflow.com/questions/111928/is-there-a-printf-converter-to-print-in-binary-format
+const char *byte_to_binary(int x) {
+    static char b[9];
+    b[0] = '\0';
 
-bool shouldExecute();
-void doDataProcessing();
-void doBranch();
-void doDataTransfer();
-void doInterupt();
+    int z;
+    for (z = 128; z > 0; z >>= 1) {
+        strcat(b, ((x & z) == z) ? "1" : "0");
+    }
 
-int isSet(int);
-int isClear(int);
-void setFlag(int);
-void clearFlag(int);
-
+    x,z=0;
+    return b;
+}
 
 /*
  * should potentially take some arguments. I want to use '-f' to point to a text file of 
@@ -192,6 +202,8 @@ void clearFlag(int);
  * -v should activate verbose logging output and -h should show the usage.
  */
 int main(int argc, char *argv[]) {
+    printf("\nStarting ARMpit...\n\n");
+
     int opt = getopt( argc, argv, optString );
     while( opt != -1 ) {
         switch( opt ) {                
@@ -224,36 +236,69 @@ int main(int argc, char *argv[]) {
     }
     
     printf("Verbose Logging: %s\n", VERBOSE? "true" : "false");
-    printf("Input File: %s\n", fileName? fileName : "");
+    printf("Input File: %s\n\n", fileName? fileName : "none");
 
     init(); // load instructions onto stack
 
     // fetch
-    INSTRUCTION instruction = fetchInstruction();
+    INSTRUCTION instruction;
+    int amountOfInstructions = STACK_POINTER;
+    
+    for(int counter = 0; counter < amountOfInstructions; counter++) {
+        instruction = fetchInstruction();
 
-    // check 1st 4 bits (if 1110 execute)
-    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction.data32);
+        // check 1st 4 bits (if 1110 execute)
+        if(shouldExecute(instruction)) {
 
-    instruction = fetchInstruction();
-    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction.data32);  
+            InstructionType type = getInstructionType(instruction);
 
-    instruction = fetchInstruction();
-    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction.data32); 
+            switch(type) {
+                case ALU:
+                    doDataProcessing();
+                    break;
+                case BRANCH:
+                    doBranch();
+                    break;
+                case DATA_TRANSFER:
+                    doDataTransfer();
+                    break;
+                case INTERUPT:
+                    doInterupt();
+                    break;
+            }
 
-    instruction = fetchInstruction();
-    if(VERBOSE) printf("\tshould execute?: %s - %04X\n", shouldExecute(instruction)? "true" : "false", instruction.data32);   
+        } else {
+            if(VERBOSE) {
+                printf("\tInstruction %i skipped!\n", counter);
+            }
+        }
+    }   
 
+    printf("\nExiting program\n\n");
     exit(EXIT_SUCCESS);
 }
 
 void init() {
-    printf("\nStarting ARMpit...\n\n");
+
+    STATUS_REGISTER = 0;
+    LINK_REGISTER = 0;
+    STACK_POINTER = 0;
+    PROGRAM_COUNTER = 0;
 
     INSTRUCTION instruction;
     instruction.data32 = 0xE3A00001;	// MOV R0, #1 	; 11100011 10100000 00000000 00000001
     loadInstruction(instruction);
 
-    instruction.data32 = 0xFFFFFFFF; // never execute;
+    instruction.data32 = 0xF0000000; // never execute;
+    loadInstruction(instruction);
+
+    instruction.data32 = 0xE4000000; // dummy branch - 01
+    loadInstruction(instruction);
+
+    instruction.data32 = 0xE8000000; // dummy transfer - 10
+    loadInstruction(instruction);
+
+    instruction.data32 = 0xEF000000; // dummy interupt - 11
     loadInstruction(instruction);
 
     instruction.data32 = 0xE3f3fa02;    // MOV R1, #2       ; 1110 0011 1010 0000 0001 0000 0000 0010
@@ -272,19 +317,30 @@ void displayUsage() {
 
 void loadInstruction(INSTRUCTION i) {
 	if(VERBOSE)
-		printf("\tLoading Instruction: %04X onto stack at position %i\n", i.data32, registers[13]);
+		printf("\tLoading Instruction: %04X onto stack at position %i\n", i.data32, STACK_POINTER);
 
 	// now to place it onto my virtual stack
-    memory[registers[13]] = i;
-    registers[13]++; //STACK_POINTER++;
+    memory[STACK_POINTER] = i;
+    STACK_POINTER++;
 }
 
 INSTRUCTION fetchInstruction() {
-    if(registers[13] > 0)
-        registers[13]--; // as the position is incremented after loading each instruction, it needs to be decreased 
-    INSTRUCTION instruction = memory[registers[13]];
-    printf("Fetching instruction: %04X from position %i\n", instruction.data32, registers[13]);
+    if(STACK_POINTER > 0)
+        STACK_POINTER--; // as the position is incremented after loading each instruction, it needs to be decreased 
+    INSTRUCTION instruction = memory[STACK_POINTER];
+    printf("\n\tFetching instruction: %04X from stack position %i\n", instruction.data32, STACK_POINTER);
     return instruction;
+}
+
+InstructionType getInstructionType(INSTRUCTION instruction) {
+    InstructionType type;
+
+    type = (instruction.data32 >> 26) & BITMASK_3_BIT;
+
+    if(VERBOSE) {
+        printf("\tInstruction is type: %d\n", type);
+    }
+    return type; // returns 0, 1, 2, or 3 for ALU, BRANCH, DATA_TRANSFER, or INTERUPT
 }
 
 
@@ -326,9 +382,9 @@ INSTRUCTION fetchInstruction() {
  * Never            1111    |   |   |   |   | Instruction never executes. Flags irrelevant.
  *
  */ 
-bool shouldExecute(INSTRUCTION i) {
+bool shouldExecute(INSTRUCTION instruction) {
     bool execute = false;
-    int conditionCode = i.data32 >> COND_CODE_POS;
+    int conditionCode = instruction.data32 >> COND_CODE_POS;
 
     switch (conditionCode) {
         case CONDITION_EQUAL: // 0000
@@ -396,6 +452,10 @@ bool shouldExecute(INSTRUCTION i) {
             execute = false;
             break;
     }
+
+    if(VERBOSE) {
+        printf("\tshould execute?: %s - %04X\n", execute? "true" : "false", instruction.data32);
+    }
     return execute; 
 }
 
@@ -413,4 +473,24 @@ void setFlag(int flag) {
 
 void clearFlag(int flag) {
     STATUS_REGISTER = STATUS_REGISTER & (~flag);
+}
+
+void doDataProcessing() {
+    printf("\tData Processing\n");
+    // todo
+}
+
+void doBranch() {
+    printf("\tBranch\n");
+    // todo
+}
+
+void doDataTransfer() {
+    printf("\tData Transfer\n");
+    // todo
+}
+
+void doInterupt() {
+    printf("\tInterupt\n");
+    // todo
 }
