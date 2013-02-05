@@ -145,7 +145,9 @@ void doBranch();
 void doDataTransfer();
 void doInterupt();
 
-bool isImmediateValue();
+bool isImmediateValue(INSTRUCTION);
+bool statusBitSet(INSTRUCTION);
+REGISTER getRegister(INSTRUCTION, int);
 
 int isSet(int);
 int isClear(int);

@@ -15,40 +15,24 @@
 
 
 // registers:
-// REGISTER registers[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-// // uint32_t *R0 = &registers[0];
-// // int R1 = *registers[1];
-// // int &REGISTER_2 = *registers[2];
-// // int &REGISTER_3 = *registers[3];
-// // int &REGISTER_4 = *registers[4];
-// // int &REGISTER_5 = *registers[5];
-// // int &REGISTER_6 = *registers[6];
-// // int &REGISTER_7 = *registers[7];
-// // int &REGISTER_8 = *registers[8];
-// // int &REGISTER_9 = *registers[9];
-// // int &REGISTER_10 = *registers[10];
-// // int &REGISTER_11 = *registers[11];
-// // int &REGISTER_12 = *registers[12];       // General Purpose (but often used as the stack pointer).
-// REGISTER *STACK_POINTER = &registers[13];     // R13 is the SP (stack pointer)
-// REGISTER *LINK_REGISTER = &registers[14];     // R14 is general purpose or the LR (link register)
-// REGISTER *PROGRAM_COUNTER = &registers[15];   // R15 is used as program counter
+REGISTER registers[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-REGISTER R1 = 0;
-REGISTER R2 = 0;
-REGISTER R3 = 0;
-REGISTER R4 = 0;
-REGISTER R5 = 0;
-REGISTER R6 = 0;
-REGISTER R7 = 0;
-REGISTER R8 = 0;
-REGISTER R9 = 0;
-REGISTER R10 = 0;
-REGISTER R11 = 0;
-REGISTER R12 = 0;
-// int &REGISTER_12 = *registers[12];       // General Purpose (but often used as the stack pointer).
-REGISTER STACK_POINTER;     // R13 is the SP (stack pointer)
-REGISTER LINK_REGISTER;     // R14 is general purpose or the LR (link register)
-REGISTER PROGRAM_COUNTER;   // R15 is used as program counter
+REGISTER* R0 = &registers[0];
+REGISTER* R1 = &registers[1];
+REGISTER* R2 = &registers[2];
+REGISTER* R3 = &registers[3];
+REGISTER* R4 = &registers[4];
+REGISTER* R5 = &registers[5];
+REGISTER* R6 = &registers[6];
+REGISTER* R7 = &registers[7];
+REGISTER* R8 = &registers[8];
+REGISTER* R9 = &registers[9];
+REGISTER* R10 = &registers[10];
+REGISTER* R11 = &registers[11];
+REGISTER* R12 = &registers[12]; // General Purpose (but often used as the stack pointer).   
+REGISTER* STACK_POINTER = &registers[12];     // R12 is the SP (stack pointer)
+REGISTER* LINK_REGISTER = &registers[14];     // R14 is general purpose or the LR (link register)
+REGISTER* PROGRAM_COUNTER = &registers[15];   // R15 is used as program counter
 
 // (note: the bottom 2 bits of the PC are always 0 0 when memory is accessed.
 //                  i.e. memory is implicitly accessed on a word aligned boundary.)
@@ -130,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     // fetch
     INSTRUCTION instruction;
-    int amountOfInstructions = STACK_POINTER;
+    int amountOfInstructions = *STACK_POINTER;
     
     for(int counter = 0; counter < amountOfInstructions; counter++) {
         instruction = fetchInstruction();
@@ -171,9 +155,9 @@ int main(int argc, char *argv[]) {
 void init() {
 
     STATUS_REGISTER = 0;
-    LINK_REGISTER = 0;
-    STACK_POINTER = 0;
-    PROGRAM_COUNTER = 0;
+    *LINK_REGISTER = 0;
+    *STACK_POINTER = 0;
+    *PROGRAM_COUNTER = 0;
 
     INSTRUCTION instruction;
     instruction.data32 = 0xE3A00001;	// MOV R0, #1 	; 11100011 10100000 00000000 00000001
@@ -207,18 +191,18 @@ void displayUsage() {
 
 void loadInstruction(INSTRUCTION i) {
 	if(VERBOSE)
-		printf("\tLoading Instruction: %04X onto stack at position %i\n", i.data32, STACK_POINTER);
+		printf("\tLoading Instruction: %04X onto stack at position %i\n", i.data32, *STACK_POINTER);
 
 	// now to place it onto my virtual stack
-    memory[STACK_POINTER] = i;
-    STACK_POINTER++;
+    memory[*STACK_POINTER] = i;
+    (*STACK_POINTER)++;
 }
 
 INSTRUCTION fetchInstruction() {
     if(STACK_POINTER > 0)
-        STACK_POINTER--; // as the position is incremented after loading each instruction, it needs to be decreased 
-    INSTRUCTION instruction = memory[STACK_POINTER];
-    printf("\n\tFetching instruction: %04X from stack position %i\n", instruction.data32, STACK_POINTER);
+        (*STACK_POINTER)--; // as the position is incremented after loading each instruction, it needs to be decreased 
+    INSTRUCTION instruction = memory[*STACK_POINTER];
+    printf("\n\tFetching instruction: %04X from stack position %i\n", instruction.data32, *STACK_POINTER);
     return instruction;
 }
 
@@ -364,6 +348,19 @@ bool isImmediateValue(INSTRUCTION instruction) {
     return immediate;
 }
 
+bool statusBitSet(INSTRUCTION instruction) {
+    bool updateStatus = (instruction.data32 >> 20) & BITMASK_1_BIT;
+    printf("\tStatus Bit:\t%s \n", updateStatus? "set" : "not set");
+    return updateStatus;
+}
+
+REGISTER getRegister(INSTRUCTION instruction, int shiftAmount) {
+    int regNo = (instruction.data32 >> shiftAmount) & BITMASK_4_BIT;
+    printf("\tRegister:\t%i \n", regNo);
+
+    return registers[regNo];
+}
+
 int isSet(int flag) {
     return (STATUS_REGISTER & flag);
 }
@@ -382,8 +379,12 @@ void clearFlag(int flag) {
 
 void doDataProcessing(INSTRUCTION instruction) {
     printf("\tData Processing...\n");
-    // todo
+    
     bool immediate = isImmediateValue(instruction);
+    bool updateStatus = statusBitSet(instruction);
+
+    REGISTER regN = getRegister(instruction, 16); // bits 16 to 19
+    REGISTER regDest = getRegister(instruction, 12); // bits 12 to 15
 
     int opCode = (instruction.data32 >> OP_CODE_POS) & BITMASK_4_BIT;
 
@@ -405,6 +406,9 @@ void doDataProcessing(INSTRUCTION instruction) {
             break;
         case OP_ADD: // 0100
             printf("\tProcessing ADD function\n");
+
+            // todo, something like:
+            // if(immediate) { doAdd(updateStatus, regDest, regN, shiftAmount, value); } else {doAdd(updateStatus, regDest, regN, shiftAmount, register);}
             break;
         case OP_ADC: // 0101
             printf("\tProcessing ADC function\n");
