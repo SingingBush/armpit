@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     // fetch
     INSTRUCTION instruction;
-    int amountOfInstructions = *STACK_POINTER;
+    int amountOfInstructions = *PROGRAM_COUNTER;
     
     for(int counter = 0; counter < amountOfInstructions; counter++) {
         instruction = fetchInstruction();
@@ -191,18 +191,18 @@ void displayUsage() {
 
 void loadInstruction(INSTRUCTION i) {
 	if(VERBOSE)
-		printf("\tLoading Instruction: %04X onto stack at position %i\n", i.data32, *STACK_POINTER);
+		printf("\tLoading Instruction: %04X onto stack at position %i\n", i.data32, *PROGRAM_COUNTER);
 
 	// now to place it onto my virtual stack
-    memory[*STACK_POINTER] = i;
-    (*STACK_POINTER)++;
+    memory[*PROGRAM_COUNTER] = i;
+    (*PROGRAM_COUNTER)++;
 }
 
 INSTRUCTION fetchInstruction() {
-    if(STACK_POINTER > 0)
-        (*STACK_POINTER)--; // as the position is incremented after loading each instruction, it needs to be decreased 
-    INSTRUCTION instruction = memory[*STACK_POINTER];
-    printf("\n\tFetching instruction: %04X from stack position %i\n", instruction.data32, *STACK_POINTER);
+    if(PROGRAM_COUNTER > 0)
+        (*PROGRAM_COUNTER)--; // as the position is incremented after loading each instruction, it needs to be decreased 
+    INSTRUCTION instruction = memory[*PROGRAM_COUNTER];
+    printf("\n\tFetching instruction: %04X from position %i\n", instruction.data32, *PROGRAM_COUNTER);
     return instruction;
 }
 
