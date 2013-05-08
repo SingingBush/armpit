@@ -28,8 +28,9 @@ REGISTER* R7 = &registers[7];
 REGISTER* R8 = &registers[8];
 REGISTER* R9 = &registers[9];
 REGISTER* R10 = &registers[10];
-REGISTER* R11 = &registers[11];  
-REGISTER* STACK_POINTER = &registers[12];     // R12 is the SP (stack pointer)
+REGISTER* R11 = &registers[11]; 
+REGISTER* R12 = &registers[12];  
+REGISTER* STACK_POINTER = &registers[13];     // R13 is the SP (stack pointer)
 REGISTER* LINK_REGISTER = &registers[14];     // R14 is general purpose or the LR (link register)
 REGISTER* PROGRAM_COUNTER = &registers[15];   // R15 is used as program counter
 
