@@ -1,6 +1,12 @@
 language: c
+
 compiler:
   - gcc
   - clang
+
+sudo: required
+
+dist: trusty
+
 # Change this to your needs
 script: make
