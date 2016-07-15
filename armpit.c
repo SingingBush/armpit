@@ -1,13 +1,13 @@
 /*
  * Compile using:
- * 			gcc armpit.c -std=c99 -o armpit
+ * 			gcc armpit.c -std=c11 -o armpit
  */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>     // for strcat
-#include <stdbool.h>	// requires C99 and is considered the "standard way" to do booleans
+#include <stdbool.h>	// requires c11 and is considered the "standard way" to do booleans
 #include <getopt.h>		// convenient argument parsing. Works on Linux and Mac OSX
 //#include <unistd.h>	// can either use unistd.h or getopt.h for handling args.
 

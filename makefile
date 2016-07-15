@@ -1,2 +1,2 @@
 all: 
-	gcc armpit.c -std=c99 -o armpit
+	gcc armpit.c -std=c11 -o armpit
