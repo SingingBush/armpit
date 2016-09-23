@@ -5,8 +5,11 @@ compiler:
   - clang
 
 sudo: required
-
 dist: trusty
+
+os:
+  - linux
+  - osx
 
 # Change this to your needs
 script: make
