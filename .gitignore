@@ -2,5 +2,8 @@
 # Ignore IDE specific files:
 .idea/
 
+# CMake
+cmake-build-debug/
+
 # Ignore compiled executable:
 armpit
