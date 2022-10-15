@@ -3,7 +3,7 @@ ARMPIT
 
 ARM Processor Imitation Technology
 
-[![Build Status](https://travis-ci.org/SingingBush/armpit.png)](https://travis-ci.org/SingingBush/armpit)
+[![cmake](https://github.com/SingingBush/armpit/actions/workflows/cmake.yml/badge.svg)](https://github.com/SingingBush/armpit/actions/workflows/cmake.yml)
 
 ARMPIT is a command line tool for simulating ARM processor instructions, started by Samael Bate (singingbush) in 2013.
 
