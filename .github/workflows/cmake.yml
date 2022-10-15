@@ -1,0 +1,40 @@
+name: cmake
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    #branches:
+    #  - master # todo: remove master
+    #  - main
+
+jobs:
+  test:
+    # Run on self-hosted if the private repo or ubuntu-latest if the public repo
+    # See pull # 17442 in the private repo for context
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os: 
+          - ubuntu-20.04
+          - ubuntu-22.04
+          - macos-11
+          - macos-12
+          - windows_latest
+        compiler: [ gcc, clang ]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      #- uses: lukka/get-cmake@latest
+
+      - name: ${{ matrix.compiler }} on ${{ matrix.os }}
+        env:
+          CC: ${{ matrix.compiler }}
+        #uses: df
+        #with:
+        #  path: /dgg/
+        #  env: sdhbsdf
+        run: cmake CMakeLists.txt
