@@ -10,6 +10,13 @@ set(ENABLE_DEVELOPER_MODE
     TRUE
     CACHE BOOL "Enable 'developer mode'")
 
+
+set(CMAKE_C_STANDARD 17)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF) # turns off compiler specific extensions
+
 set(SOURCE_FILES
     armpit.c
     armpit.h)
