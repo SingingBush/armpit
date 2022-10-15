@@ -1,0 +1,40 @@
+name: cmake
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master # todo: remove master
+      - main
+
+jobs:
+  build:
+    name: ${{ matrix.compiler }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5 # runs in seconds on Linux but Windows
+    strategy:
+      fail-fast: false
+      matrix:
+        os: 
+          - ubuntu-20.04
+          - ubuntu-22.04
+        compiler: [ gcc, clang ]
+        include:
+          # osx only has clang (AppleClang)
+          - { os: 'macos-11', compiler: 'clang' }
+          - { os: 'macos-12', compiler: 'clang' }
+          # windows should use MinGW or MSVC but will prob need
+          # https://github.com/msys2/setup-msys2
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: run cmake
+        env:
+          CC: ${{ matrix.compiler }}
+        #uses: df
+        #with:
+        #  path: /dgg/
+        #  env: sdhbsdf
+        run: cmake CMakeLists.txt
