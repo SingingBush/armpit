@@ -17,13 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         os: 
-          - ubuntu-20.04
           - ubuntu-22.04
+          - ubuntu-24.04
         compiler: [ gcc, clang ]
         include:
           # osx only has clang (AppleClang)
-          - { os: 'macos-11', compiler: 'clang' }
-          - { os: 'macos-12', compiler: 'clang' }
+          - { os: 'macos-15-arm64', compiler: 'clang' }
+          - { os: 'macos-15-intel', compiler: 'clang' }
           # windows should use MinGW or MSVC but will prob need
           # https://github.com/msys2/setup-msys2
 
